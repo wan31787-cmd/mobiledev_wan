@@ -1,0 +1,194 @@
+import 'package:flutter/material.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import '../firestore_api.dart';
+
+class AddAppointmentPage extends StatefulWidget {
+  final String username;
+  const AddAppointmentPage({super.key, required this.username});
+
+  @override
+  State<AddAppointmentPage> createState() => _AddAppointmentPageState();
+}
+
+class _AddAppointmentPageState extends State<AddAppointmentPage> {
+  final _titleController = TextEditingController();
+  final _doctorController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _preparationController = TextEditingController();
+  DateTime? _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    tz.initializeTimeZones();
+  }
+
+  void _pickDateTime() async {
+    final bangkok = tz.getLocation('Asia/Bangkok');
+    final now = tz.TZDateTime.now(bangkok);
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 2),
+    );
+
+    if (date != null) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(hour: now.hour, minute: now.minute),
+      );
+
+      if (time != null) {
+        final dt = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        );
+        setState(() {
+          _selectedDate = tz.TZDateTime.from(dt, bangkok).toLocal();
+        });
+      }
+    }
+  }
+
+  void _saveAppointment() async {
+    if (_titleController.text.isEmpty ||
+        _selectedDate == null ||
+        _doctorController.text.isEmpty ||
+        _locationController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("กรุณากรอกข้อมูลให้ครบ")));
+      return;
+    }
+
+    final appointment = {
+      "username": widget.username,
+      "title": _titleController.text,
+      "date": _selectedDate!,
+      "doctor": _doctorController.text,
+      "location": _locationController.text,
+      "preparation": _preparationController.text,
+    };
+
+    final success = await FirestoreAPI.addAppointment(appointment);
+
+    if (success) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("บันทึกนัดหมายสำเร็จ")));
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("เกิดข้อผิดพลาดในการบันทึก")),
+      );
+    }
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: TextField(
+          controller: controller,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: Colors.green.shade700),
+            labelText: label,
+            border: InputBorder.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("เพิ่มการนัดหมาย"),
+        backgroundColor: Colors.green.shade700,
+        elevation: 4,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListView(
+          children: [
+            _buildTextField(
+              controller: _titleController,
+              label: "หัวข้อการนัดหมาย",
+              icon: Icons.title,
+            ),
+            _buildTextField(
+              controller: _doctorController,
+              label: "ชื่อแพทย์",
+              icon: Icons.person,
+            ),
+            _buildTextField(
+              controller: _locationController,
+              label: "สถานที่นัดหมาย",
+              icon: Icons.location_on,
+            ),
+            _buildTextField(
+              controller: _preparationController,
+              label: "สิ่งที่ต้องเตรียมไป",
+              icon: Icons.list_alt,
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 3,
+              child: ListTile(
+                leading: const Icon(Icons.calendar_today, color: Colors.green),
+                title: Text(
+                  _selectedDate == null
+                      ? "เลือกวันและเวลา"
+                      : "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year} "
+                          "${_selectedDate!.hour}:${_selectedDate!.minute.toString().padLeft(2, '0')}",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                onTap: _pickDateTime,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.save),
+                label: const Text(
+                  "บันทึกนัดหมาย",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                ),
+                onPressed: _saveAppointment,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "337843740365",
+    "project_id": "dbmobileapp-1f398",
+    "storage_bucket": "dbmobileapp-1f398.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337843740365:android:8523af6ac98c107dab1384",
+        "android_client_info": {
+          "package_name": "com.example.mobiledev_wan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDSbDtjT2x-x8FchnGJgDHc8aIZNvfXWfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
