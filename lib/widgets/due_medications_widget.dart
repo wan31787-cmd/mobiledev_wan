@@ -11,7 +11,7 @@ class DueMedicationsWidget extends StatefulWidget {
 }
 
 class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
-  List<Map<String, String>> dueMeds = [];
+  List<Map<String, dynamic>> dueMeds = []; // <-- แก้ตรงนี้
   bool isLoading = true;
   Timer? _timer;
 
@@ -20,7 +20,6 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
     super.initState();
     loadDueMedications();
 
-    // Update ทุก 30 วินาที
     _timer = Timer.periodic(const Duration(seconds: 30), (_) {
       loadDueMedications();
     });
@@ -38,20 +37,18 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
     final meds = await FirestoreAPI.getMedications(widget.username);
     final now = DateTime.now();
 
-    final due =
-        meds.where((med) {
-          try {
-            // แปลง notifyTime จาก ISO 8601 string เป็น DateTime
-            final notifyTimeStr = med['notifyTime']!;
-            final medDateTime = DateTime.parse(notifyTimeStr);
-            final medEndTime = medDateTime.add(const Duration(minutes: 15));
+    final due = meds.where((med) {
+      try {
+        final notifyTimeStr = med['notifyTime']?.toString() ?? '';
+        final medDateTime = DateTime.parse(notifyTimeStr);
+        final medEndTime = medDateTime.add(const Duration(minutes: 15));
 
-            return now.isAfter(medDateTime) && now.isBefore(medEndTime);
-          } catch (e) {
-            debugPrint("Error parsing notifyTime: $e");
-            return false;
-          }
-        }).toList();
+        return now.isAfter(medDateTime) && now.isBefore(medEndTime);
+      } catch (e) {
+        debugPrint("Error parsing notifyTime: $e");
+        return false;
+      }
+    }).toList();
 
     setState(() {
       dueMeds = due;
@@ -94,7 +91,6 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
-          // แยก Widget body
           _buildBody(maxWidth),
         ],
       ),
@@ -117,8 +113,15 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
         itemCount: dueMeds.length,
         itemBuilder: (context, index) {
           final med = dueMeds[index];
+          final importance = med['importance']?.toString() ?? '';
+          final type = med['type']?.toString() ?? '';
+          final name = med['name']?.toString() ?? '';
+          final notifyTime = med['notifyTime']?.toString() ?? '';
+          final dose = med['dose']?.toString() ?? '';
+          final mealTime = med['mealTime']?.toString() ?? '';
+
           return Card(
-            color: _importanceColor(med['importance']!).withOpacity(0.1),
+            color: _importanceColor(importance).withOpacity(0.1),
             elevation: 4,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -133,15 +136,13 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
                     children: [
                       CircleAvatar(
                         radius: maxWidth * 0.06,
-                        backgroundColor: _importanceColor(
-                          med['importance']!,
-                        ).withOpacity(0.2),
-                        child: _typeIcon(med['type']!),
+                        backgroundColor: _importanceColor(importance).withOpacity(0.2),
+                        child: _typeIcon(type),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          med['name']!,
+                          name,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -150,12 +151,10 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
                         ),
                       ),
                       Chip(
-                        label: Text(med['importance']!),
-                        backgroundColor: _importanceColor(
-                          med['importance']!,
-                        ).withOpacity(0.2),
+                        label: Text(importance),
+                        backgroundColor: _importanceColor(importance).withOpacity(0.2),
                         labelStyle: TextStyle(
-                          color: _importanceColor(med['importance']!),
+                          color: _importanceColor(importance),
                           fontWeight: FontWeight.bold,
                           fontSize: maxWidth * 0.035,
                         ),
@@ -165,25 +164,14 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
+                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          'เวลาแจ้งเตือน: ${med['notifyTime']}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text('เวลาแจ้งเตือน: $notifyTime', overflow: TextOverflow.ellipsis),
                       ),
                       const SizedBox(width: 16),
-                      const Icon(
-                        Icons.medication,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      Text('จำนวน: ${med['dose']}'),
+                      const Icon(Icons.medication, size: 16, color: Colors.grey),
+                      Text('จำนวน: $dose'),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -191,7 +179,7 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
                     spacing: 8,
                     children: [
                       Chip(
-                        label: Text(med['mealTime']!),
+                        label: Text(mealTime),
                         backgroundColor: Colors.blue[50],
                         labelStyle: const TextStyle(
                           color: Colors.blue,
@@ -199,7 +187,7 @@ class _DueMedicationsWidgetState extends State<DueMedicationsWidget> {
                         ),
                       ),
                       Chip(
-                        label: Text(med['type']!),
+                        label: Text(type),
                         backgroundColor: Colors.purple[50],
                         labelStyle: const TextStyle(
                           color: Colors.purple,

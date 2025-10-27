@@ -1,6 +1,9 @@
+import 'dart:async'; // ✅ สำหรับ Timer
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mobiledev_wan/addMedicationPage.dart';
-import 'firestore_api.dart';
+import 'package:mobiledev_wan/firestore_api.dart';
+import 'package:mobiledev_wan/widgets/ReportPage.dart';
 import 'widgets/due_medications_widget.dart';
 import 'widgets/due_appointments_widget.dart';
 import 'widgets/medication_list_widget.dart';
@@ -13,25 +16,29 @@ class MedicationPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final name = medication['name']?.toString() ?? '-';
+    final notifyTime = medication['notifyTime']?.toString() ?? '-';
+    final dose = medication['dose']?.toString() ?? '-';
+    final importance = medication['importance']?.toString() ?? '-';
+    final type = medication['type']?.toString() ?? '-';
+    final mealTime = medication['mealTime']?.toString() ?? '-';
+
     return AlertDialog(
-      title: Text(medication['name'].toString()),
+      title: Text(name),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('เวลาแจ้งเตือน: ${medication['notifyTime']}'),
-          Text('จำนวน: ${medication['dose']}'),
-          Text('ความสำคัญ: ${medication['importance']}'),
-          Text('ประเภท: ${medication['type']}'),
-          Text('เวลากิน: ${medication['mealTime']}'),
+          Text('เวลาแจ้งเตือน: $notifyTime'),
+          Text('จำนวน: $dose'),
+          Text('ความสำคัญ: $importance'),
+          Text('ประเภท: $type'),
+          Text('เวลากิน: $mealTime'),
         ],
       ),
       actions: [
         ElevatedButton(
-          onPressed: () {
-            // TODO: อัพเดตสถานะ taken/finished ถ้าต้องการ
-            Navigator.of(context).pop();
-          },
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('สำเร็จ'),
         ),
       ],
@@ -41,7 +48,13 @@ class MedicationPopup extends StatelessWidget {
 
 class MainMobile extends StatefulWidget {
   final String username;
-  const MainMobile({super.key, required this.username});
+  final String email; // ✅ เพิ่มฟิลด์อีเมล
+
+  const MainMobile({
+    super.key,
+    required this.username,
+    required this.email, // ✅ ต้องรับค่า email มาด้วย
+  });
 
   @override
   State<MainMobile> createState() => _MainMobileState();
@@ -49,9 +62,68 @@ class MainMobile extends StatefulWidget {
 
 class _MainMobileState extends State<MainMobile> {
   int _selectedIndex = 0;
+  Timer? _timer;
+  List<Map<String, dynamic>> _medications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMedications();
+
+    // ✅ ตั้งเวลาให้ตรวจทุก 30 วินาที
+    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _checkMedicationTime();
+    });
+  }
+
+  Future<void> _loadMedications() async {
+    final meds = await FirestoreAPI.getMedications(widget.username);
+    setState(() {
+      _medications = meds;
+    });
+  }
+
+  void _checkMedicationTime() {
+    final now = DateFormat('HH:mm').format(DateTime.now());
+    for (var med in _medications) {
+      final notifyTime = med['notifyTime']?.toString();
+      if (notifyTime == now) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('แจ้งเตือนการทานยา 💊'),
+            content: Text('ถึงเวลาทานยา ${med['name']} แล้ว\nเวลา: $notifyTime'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('รับทราบ'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  Color _importanceColor(String importance) {
+    switch (importance) {
+      case 'สำคัญมาก':
+        return Colors.redAccent;
+      case 'สำคัญ':
+        return Colors.orangeAccent;
+      default:
+        return Colors.green;
+    }
   }
 
   // --- Home Page ---
@@ -65,6 +137,18 @@ class _MainMobileState extends State<MainMobile> {
         child: Column(
           children: [
             const SizedBox(height: 20),
+
+            // ✅ แสดงชื่อและอีเมลของผู้ใช้
+            Text(
+              'สวัสดีคุณ ${widget.username}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'อีเมลของคุณ: ${widget.email}',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+
             // --- ยาที่ถึงเวลา ---
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: cardWidth),
@@ -91,15 +175,12 @@ class _MainMobileState extends State<MainMobile> {
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: FirestoreAPI.getMedications(widget.username),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState !=
-                              ConnectionState.done) {
+                          if (snapshot.connectionState != ConnectionState.done) {
                             return const CircularProgressIndicator();
                           }
                           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Text(
-                              'ยังไม่มีรายการยา',
-                              style: TextStyle(fontSize: 16),
-                            );
+                            return const Text('ยังไม่มีรายการยา',
+                                style: TextStyle(fontSize: 16));
                           }
 
                           final meds = snapshot.data!;
@@ -109,25 +190,21 @@ class _MainMobileState extends State<MainMobile> {
                             itemCount: meds.length,
                             itemBuilder: (context, index) {
                               final med = meds[index];
-
-                              Color importanceColor;
-                              switch (med['importance'].toString()) {
-                                case 'สำคัญมาก':
-                                  importanceColor = Colors.redAccent;
-                                  break;
-                                case 'สำคัญ':
-                                  importanceColor = Colors.orangeAccent;
-                                  break;
-                                default:
-                                  importanceColor = Colors.green;
-                              }
+                              final name = med['name']?.toString() ?? '-';
+                              final notifyTime =
+                                  med['notifyTime']?.toString() ?? '-';
+                              final dose = med['dose']?.toString() ?? '-';
+                              final importance =
+                                  med['importance']?.toString() ?? '-';
+                              final importanceColor =
+                                  _importanceColor(importance);
 
                               return InkWell(
                                 onTap: () {
                                   showDialog(
                                     context: context,
-                                    builder:
-                                        (_) => MedicationPopup(medication: med),
+                                    builder: (_) =>
+                                        MedicationPopup(medication: med),
                                   );
                                 },
                                 child: Card(
@@ -135,21 +212,18 @@ class _MainMobileState extends State<MainMobile> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 6),
                                   child: Padding(
                                     padding: const EdgeInsets.all(12.0),
                                     child: Row(
                                       children: [
                                         CircleAvatar(
                                           radius: 25,
-                                          backgroundColor: importanceColor
-                                              .withOpacity(0.2),
-                                          child: Icon(
-                                            Icons.medical_services,
-                                            color: importanceColor,
-                                          ),
+                                          backgroundColor:
+                                              importanceColor.withOpacity(0.2),
+                                          child: Icon(Icons.medical_services,
+                                              color: importanceColor),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -158,7 +232,7 @@ class _MainMobileState extends State<MainMobile> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                med['name'].toString(),
+                                                name,
                                                 style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.bold,
@@ -166,7 +240,7 @@ class _MainMobileState extends State<MainMobile> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                'เวลาแจ้งเตือน: ${med['notifyTime']} | จำนวน: ${med['dose']}',
+                                                'เวลาแจ้งเตือน: $notifyTime | จำนวน: $dose',
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   color: Colors.black87,
@@ -176,11 +250,9 @@ class _MainMobileState extends State<MainMobile> {
                                           ),
                                         ),
                                         Chip(
-                                          label: Text(
-                                            med['importance'].toString(),
-                                          ),
-                                          backgroundColor: importanceColor
-                                              .withOpacity(0.2),
+                                          label: Text(importance),
+                                          backgroundColor:
+                                              importanceColor.withOpacity(0.2),
                                           labelStyle: TextStyle(
                                             color: importanceColor,
                                             fontWeight: FontWeight.bold,
@@ -238,23 +310,12 @@ class _MainMobileState extends State<MainMobile> {
     );
   }
 
-  // --- Medication Page ---
-  Widget _addMedicationPage() {
-    return MedicationListWidget(username: widget.username);
-  }
-
-  Widget _appointmentsPage() {
-    return AppointmentsPage(username: widget.username);
-  }
-
-  Widget _settingsPage() {
-    return Center(
-      child: ElevatedButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Logout'),
-      ),
-    );
-  }
+  // ✅ ส่ง email ต่อไปด้วย
+  Widget _addMedicationPage() =>
+      MedicationListWidget(username: widget.username);
+  Widget _appointmentsPage() =>
+      AppointmentsPage(username: widget.username);
+  Widget _ReportPage() => ReportPage(username: widget.username);
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +323,7 @@ class _MainMobileState extends State<MainMobile> {
       _homePage(),
       _addMedicationPage(),
       _appointmentsPage(),
-      _settingsPage(),
+      _ReportPage(),
     ];
 
     return Scaffold(
@@ -278,19 +339,12 @@ class _MainMobileState extends State<MainMobile> {
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.medical_services),
-            label: 'Medications',
-          ),
+              icon: Icon(Icons.medical_services), label: 'ยาของฉัน'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Appointments',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
+              icon: Icon(Icons.calendar_today), label: 'นัดหมายของฉัน'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'รายงาน'),
         ],
       ),
     );

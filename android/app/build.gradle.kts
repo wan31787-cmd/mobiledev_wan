@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.mobiledev_wan"
-    compileSdk = 34 // Android 15
+    compileSdk = 35 // ✅ อัปเดตเป็น Android SDK 35
 
     ndkVersion = "27.0.12077973"
 
@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId = "com.example.mobiledev_wan"
         minSdk = 21
-        targetSdk = 34 // Android 15
+        targetSdk = 35 // ✅ อัปเดตให้ตรงกับ compileSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

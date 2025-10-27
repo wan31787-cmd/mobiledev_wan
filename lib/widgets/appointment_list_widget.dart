@@ -1,10 +1,16 @@
-// lib/widgets/appointment_list_widget.dart
 import 'package:flutter/material.dart';
 
 class AppointmentListWidget extends StatelessWidget {
   final List<Map<String, dynamic>> appointments;
+  final void Function(int index) onEdit; // ฟังก์ชันเรียกตอนแก้ไข
+  final void Function(int index) onDelete; // ฟังก์ชันเรียกตอนลบ
 
-  const AppointmentListWidget({super.key, required this.appointments});
+  const AppointmentListWidget({
+    super.key,
+    required this.appointments,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +58,30 @@ class AppointmentListWidget extends StatelessWidget {
                   "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}",
                 ),
                 Text("แพทย์: ${appt['doctor']}"),
+                if (appt['department'] != null &&
+                    appt['department'].toString().isNotEmpty)
+                  Text("แผนก: ${appt['department']}"), // ✅ แสดงแผนก
                 Text("สถานที่: ${appt['location']}"),
                 if (appt['preparation'] != null &&
                     appt['preparation'].toString().isNotEmpty)
                   Text("สิ่งที่ต้องเตรียม: ${appt['preparation']}"),
               ],
             ),
-            trailing: const Icon(Icons.event_note, color: Colors.green),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => onEdit(index),
+                  tooltip: 'แก้ไขนัดหมาย',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => onDelete(index),
+                  tooltip: 'ลบนัดหมาย',
+                ),
+              ],
+            ),
           ),
         );
       },
