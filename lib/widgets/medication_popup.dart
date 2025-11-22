@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobiledev_wan/addMedicationPage.dart';
 import 'package:mobiledev_wan/appointments_page.dart';
-import 'package:mobiledev_wan/firestore_api.dart';
+import 'package:mobiledev_wan/services/firestore_api.dart';
 import 'package:mobiledev_wan/widgets/due_appointments_widget.dart';
 import 'package:mobiledev_wan/widgets/medication_list_widget.dart';
 

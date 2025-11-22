@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'add_appointment_page.dart';
-import '../firestore_api.dart';
+import 'services/firestore_api.dart';
 import '../services/notification_service.dart';
 
 class AppointmentsPage extends StatefulWidget {

@@ -4,7 +4,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../firestore_api.dart';
+import 'services/firestore_api.dart';
 import '../services/notification_service.dart';
 
 class AddAppointmentPage extends StatefulWidget {

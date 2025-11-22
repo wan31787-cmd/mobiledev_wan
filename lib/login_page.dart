@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'firestore_api.dart';
+import 'services/firestore_api.dart';
 import 'main_mobile.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function(String username, String email)? onLoginSuccess; // 🔹 callback หลัง login หรือ register
+  final Function(String username)? onLoginSuccess;
 
   const LoginPage({super.key, this.onLoginSuccess});
 
@@ -19,6 +19,20 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
   bool showPassword = false;
   bool acceptPolicy = false;
+
+  void _showSnackBar(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: success ? Colors.green : Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +58,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 100,
-                    ),
+                    Image.asset('assets/logo.png', height: 100),
                     const SizedBox(height: 10),
                     Text(
                       isLogin
@@ -74,10 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                       controller: usernameController,
                       decoration: InputDecoration(
                         labelText: 'ชื่อผู้ใช้',
-                        prefixIcon: const Icon(
-                          Icons.person,
-                          color: Color(0xFF00796B),
-                        ),
+                        prefixIcon: const Icon(Icons.person, color: Color(0xFF00796B)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -91,15 +99,10 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: !showPassword,
                       decoration: InputDecoration(
                         labelText: 'รหัสผ่าน',
-                        prefixIcon: const Icon(
-                          Icons.lock,
-                          color: Color(0xFF00796B),
-                        ),
+                        prefixIcon: const Icon(Icons.lock, color: Color(0xFF00796B)),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            showPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                            showPassword ? Icons.visibility : Icons.visibility_off,
                             color: const Color(0xFF00796B),
                           ),
                           onPressed: () {
@@ -137,10 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                               },
                               child: const Text(
                                 'ข้าพเจ้ายอมรับนโยบายความเป็นส่วนตัว',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                ),
+                                style: TextStyle(fontSize: 14, color: Colors.black87),
                               ),
                             ),
                           ),
@@ -160,93 +160,55 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: isLoading
                             ? null
                             : () async {
-                                setState(() {
-                                  isLoading = true;
-                                });
+                                setState(() => isLoading = true);
 
-                                final username =
-                                    usernameController.text.trim();
-                                final password =
-                                    passwordController.text.trim();
+                                final username = usernameController.text.trim();
+                                final password = passwordController.text.trim();
 
                                 if (username.isEmpty || password.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน',
-                                      ),
-                                    ),
-                                  );
+                                  _showSnackBar('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
                                   setState(() => isLoading = false);
                                   return;
                                 }
 
                                 if (isLogin) {
-                                  // เข้าสู่ระบบ
+                                  // 🔹 เข้าสู่ระบบ
                                   final users = await FirestoreAPI.getUsers();
                                   final match = users.firstWhere(
                                     (u) =>
                                         u['username'] == username &&
                                         u['password'] == password,
-                                    orElse: () => {},
+                                    orElse: () => <String, String>{},
                                   );
+
                                   if (match.isNotEmpty) {
-                                    final email = match['email'] ?? '';
                                     if (widget.onLoginSuccess != null) {
-                                      widget.onLoginSuccess!(username, email);
+                                      widget.onLoginSuccess!(username);
                                     }
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => MainMobile(
-                                          username: username,
-                                          email: email,
-                                        ),
+                                        builder: (_) => MainMobile(username: username),
                                       ),
                                     );
                                   } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
-                                        ),
-                                      ),
-                                    );
+                                    _showSnackBar('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
                                   }
                                 } else {
-                                  // สมัครสมาชิก
+                                  // 🔹 สมัครสมาชิก
                                   if (!acceptPolicy) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'กรุณายอมรับนโยบายก่อนสมัครสมาชิก',
-                                        ),
-                                      ),
-                                    );
+                                    _showSnackBar('กรุณายอมรับนโยบายก่อนสมัครสมาชิก');
                                     setState(() => isLoading = false);
                                     return;
                                   }
 
-                                  // 🔹 ใช้ await พร้อม async
-                                  final success = await FirestoreAPI.registerUser(
-                                      username, password);
-                                  if (success) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text('สมัครสมาชิกสำเร็จแล้ว'),
-                                      ),
-                                    );
+                                  final success = await FirestoreAPI.registerUser(username, password);
 
-                                    // ดึง email หลัง register
-                                    final users = await FirestoreAPI.getUsers();
-                                    final newUser = users.firstWhere(
-                                        (u) => u['username'] == username,
-                                        orElse: () => {});
-                                    final email = newUser['email'] ?? '';
+                                  if (success) {
+                                    _showSnackBar('สมัครสมาชิกสำเร็จแล้ว', success: true);
 
                                     if (widget.onLoginSuccess != null) {
-                                      widget.onLoginSuccess!(username, email);
+                                      widget.onLoginSuccess!(username);
                                     }
 
                                     setState(() {
@@ -254,38 +216,24 @@ class _LoginPageState extends State<LoginPage> {
                                       acceptPolicy = false;
                                     });
                                   } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'ไม่สามารถสมัครสมาชิกได้ ลองอีกครั้ง'),
-                                      ),
-                                    );
+                                    _showSnackBar('ไม่สามารถสมัครสมาชิกได้ ลองอีกครั้ง');
                                   }
                                 }
 
-                                setState(() {
-                                  isLoading = false;
-                                });
+                                setState(() => isLoading = false);
                               },
                         child: isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : Text(
                                 isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.white,
-                                ),
+                                style: const TextStyle(fontSize: 18, color: Colors.white),
                               ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        setState(() {
-                          isLogin = !isLogin;
-                        });
+                        setState(() => isLogin = !isLogin);
                       },
                       child: Text(
                         isLogin

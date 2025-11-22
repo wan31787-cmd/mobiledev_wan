@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
-import 'firestore_api.dart';
+import 'services/firestore_api.dart';
 import 'login_page.dart';
 import 'main_mobile.dart';
 
@@ -17,18 +19,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
-/// 🔔 ฟังก์ชันดึงข้อมูลจาก Firestore แล้วตั้งเวลาแจ้งเตือน
+/// 🔔 ดึงข้อมูลจาก Firestore แล้วตั้งเวลาแจ้งเตือน
 Future<void> scheduleRemindersFromFirestore(String username) async {
-  // ดึงรายการยา
   final meds = await FirestoreAPI.getMedications(username);
   for (var med in meds) {
     final notifyTimeStr = med['notifyTime'] ?? '';
     if (notifyTimeStr.isEmpty) continue;
 
-    DateTime notifyTime;
+    DateTime? notifyTime;
     try {
       notifyTime = DateTime.parse(notifyTimeStr);
     } catch (_) {
+      debugPrint('⚠️ Error parsing notifyTime: $notifyTimeStr. Skipping reminder.');
       continue;
     }
 
@@ -41,7 +43,6 @@ Future<void> scheduleRemindersFromFirestore(String username) async {
     );
   }
 
-  // ดึงรายการนัดหมาย
   final apps = await FirestoreAPI.getAppointments(username);
   for (var app in apps) {
     final date = app['date'] is DateTime
@@ -63,22 +64,27 @@ Future<void> scheduleRemindersFromFirestore(String username) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize Firebase
+  // ✅ 1. ตั้งค่า Timezone
+  tz.initializeTimeZones();
+
+  // ✅ 2. เริ่มต้น Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // ✅ Initialize Notification Service
+  // ✅ 3. ตั้งค่า Notification Service
   await NotificationService.init();
 
-  // ✅ ขอสิทธิ์แจ้งเตือน
+  // ✅ 4. ขอสิทธิ์แจ้งเตือนพื้นฐาน
+  await NotificationService.requestCrucialPermissions();
+
+  // ✅ 5. ขอสิทธิ์แจ้งเตือนเพิ่มเติม (Android 13+)
   final status = await Permission.notification.request();
   if (status.isDenied || status.isPermanentlyDenied) {
     debugPrint('⚠️ ผู้ใช้ยังไม่อนุญาตการแจ้งเตือน');
   }
 
-  // ✅ ตั้งค่า FCM background handler
+  // ✅ 6. ตั้งค่า Firebase Messaging (FCM)
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // ✅ เมื่อแอปเปิดอยู่ (foreground)
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     final notification = message.notification;
     if (notification != null) {
@@ -89,7 +95,6 @@ Future<void> main() async {
     }
   });
 
-  // ✅ เมื่อผู้ใช้กดแจ้งเตือนเปิดแอปขึ้นมา
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     debugPrint('📩 ผู้ใช้กดแจ้งเตือน: ${message.notification?.title}');
   });
@@ -100,7 +105,7 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // ปุ่มทดสอบแจ้งเตือน (แจ้งเตือนใน 3 วินาที)
+  /// 🔔 ปุ่มทดสอบแจ้งเตือน
   Future<void> _showTestNotification() async {
     await NotificationService.scheduleMedicationNotification(
       id: 9999,
@@ -111,13 +116,16 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  /// ✅ ฟังก์ชันเมื่อผู้ใช้ล็อกอินสำเร็จ
-  void _onUserLogin(BuildContext context, String username, String email) async {
+  /// ✅ เมื่อผู้ใช้ล็อกอินสำเร็จ
+  void _onUserLogin(BuildContext context, String username) async {
     await scheduleRemindersFromFirestore(username);
+
+    if (!context.mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => MainMobile(username: username, email: email),
+        builder: (_) => MainMobile(username: username),
       ),
     );
   }
@@ -127,19 +135,23 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'แอปช่วยแจ้งเตือนการรักษา',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Medication App'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_active_outlined),
-              onPressed: _showTestNotification, // ปุ่มทดสอบแจ้งเตือน
-            ),
-          ],
-        ),
-        body: LoginPage(
-          onLoginSuccess: (username, email) =>
-              _onUserLogin(context, username, email),
+      home: Builder(
+        builder: (innerContext) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Medication App'),
+            backgroundColor: Colors.green,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.notifications_active_outlined),
+                onPressed: _showTestNotification,
+              ),
+            ],
+          ),
+          body: LoginPage(
+            onLoginSuccess: (username) {
+              _onUserLogin(innerContext, username);
+            },
+          ),
         ),
       ),
     );

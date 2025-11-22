@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../firestore_api.dart';
+import '../services/firestore_api.dart';
 import '../addMedicationPage.dart';
 
 class MedicationListWidget extends StatefulWidget {

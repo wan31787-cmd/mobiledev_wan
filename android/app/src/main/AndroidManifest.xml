@@ -1,18 +1,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.mobiledev_wan">
 
-    <!-- Permissions -->
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- ✅ สำหรับ Android 13 (API 33) ขึ้นไป ต้องขอสิทธิ์แสดง Notification -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ✅ สำหรับการตั้งเวลาที่แม่นยำ (Exact Alarms) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- ✅ สำหรับ Android เวอร์ชันเก่ากว่า 12 บางรุ่นใช้ตัวนี้ -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- ✅ เพิ่มเติมสำหรับการแจ้งเตือนพื้นหลัง -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
-        android:label="mobiledev_wan"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:label="mobiledev_wan"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true">
 
+        <!-- 🧭 Activity หลัก -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,29 +35,40 @@
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme"/>
+                android:resource="@style/NormalTheme" />
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- ✅ Default Channel สำหรับ FCM -->
+        <!-- ✅ Default Notification Channel สำหรับ Firebase -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="high_importance_channel" />
+            android:value="firebase_channel" />
 
-        <!-- Flutter embedding metadata -->
+        <!-- ✅ Flutter embedding version -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- ✅ สำหรับการแจ้งเตือนจาก Firebase Messaging -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     </application>
 
+    <!-- ✅ เผื่อบางเครื่องต้องใช้ -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
         </intent>
     </queries>
 </manifest>

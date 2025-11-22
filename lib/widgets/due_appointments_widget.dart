@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../firestore_api.dart';
+import '../services/firestore_api.dart';
 
 class DueAppointmentsWidget extends StatefulWidget {
   final String username;

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:mobiledev_wan/services/notification_service.dart';
+import 'notification_service.dart'; // ✅ แก้ให้เรียบร้อย อยู่โฟลเดอร์เดียวกัน
 
 // ======================= Firestore Base URLs =======================
 const String baseUsersUrl =
@@ -12,12 +12,11 @@ const String baseAppointmentsUrl =
 
 class FirestoreAPI {
   // ======================= Users =======================
-  static Future<bool> registerUser(String username, String password, String email) async {
+  static Future<bool> registerUser(String username, String password) async {
     final body = {
       "fields": {
         "username": {"stringValue": username},
         "password": {"stringValue": password},
-        "email": {"stringValue": email},
       },
     };
 
@@ -43,7 +42,6 @@ class FirestoreAPI {
         users.add({
           'username': fields['username']?['stringValue'] ?? '',
           'password': fields['password']?['stringValue'] ?? '',
-          'email': fields['email']?['stringValue'] ?? '',
         });
       }
     }
@@ -55,7 +53,6 @@ class FirestoreAPI {
     final body = {
       "fields": {
         "username": {"stringValue": medication['username'] ?? ''},
-        "email": {"stringValue": medication['email'] ?? ''},
         "name": {"stringValue": medication['name'] ?? ''},
         "mealTime": {"stringValue": medication['mealTime'] ?? ''},
         "notifyTime": {"stringValue": medication['notifyTime'] ?? ''},
@@ -105,7 +102,6 @@ class FirestoreAPI {
     final body = {
       "fields": {
         "username": {"stringValue": medication['username'] ?? ''},
-        "email": {"stringValue": medication['email'] ?? ''},
         "name": {"stringValue": medication['name'] ?? ''},
         "mealTime": {"stringValue": medication['mealTime'] ?? ''},
         "notifyTime": {"stringValue": medication['notifyTime'] ?? ''},
@@ -157,7 +153,6 @@ class FirestoreAPI {
             'importance': fields['importance']?['stringValue'] ?? '',
             'takenToday': fields['takenToday']?['booleanValue'] ?? false,
             'taken': fields['taken']?['booleanValue'] ?? false,
-            'email': fields['email']?['stringValue'] ?? '',
           });
         }
       }
@@ -171,7 +166,6 @@ class FirestoreAPI {
     final body = {
       "fields": {
         "username": {"stringValue": appointment['username'] ?? ''},
-        "email": {"stringValue": appointment['email'] ?? ''},
         "title": {"stringValue": appointment['title'] ?? ''},
         "date": {
           "timestampValue": (appointment['date'] as DateTime).toUtc().toIso8601String(),
@@ -199,7 +193,6 @@ class FirestoreAPI {
     final body = {
       "fields": {
         "username": {"stringValue": appointment['username'] ?? ''},
-        "email": {"stringValue": appointment['email'] ?? ''},
         "title": {"stringValue": appointment['title'] ?? ''},
         "date": {
           "timestampValue": (appointment['date'] as DateTime).toUtc().toIso8601String(),
@@ -251,7 +244,6 @@ class FirestoreAPI {
         apps.add({
           'id': doc['name'].toString().split('/').last,
           'username': username,
-          'email': fields['email']?['stringValue'] ?? '',
           'title': fields['title']?['stringValue'] ?? '',
           'date': date,
           'doctor': fields['doctor']?['stringValue'] ?? '',

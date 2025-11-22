@@ -1,15 +1,22 @@
 import 'dart:async'; // ✅ สำหรับ Timer
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mobiledev_wan/addMedicationPage.dart';
-import 'package:mobiledev_wan/firestore_api.dart';
-import 'package:mobiledev_wan/widgets/ReportPage.dart';
+
+// ✅ ตรวจสอบให้ตรงกับโครงสร้างไฟล์ในโปรเจกต์ของคุณ
+import 'addMedicationPage.dart';
+import 'appointments_page.dart';
+
+// ✅ หน้าที่อยู่ใน widgets/
+import 'widgets/ReportPage.dart';
 import 'widgets/due_medications_widget.dart';
 import 'widgets/due_appointments_widget.dart';
 import 'widgets/medication_list_widget.dart';
-import 'appointments_page.dart';
+import 'widgets/notification_test_page.dart';
 
-// --- Popup Widget แยก ---
+// ✅ หน้าที่อยู่ใน services/
+import 'services/firestore_api.dart';
+import 'widgets/notification_settings_page.dart';
+
 class MedicationPopup extends StatelessWidget {
   final Map<String, dynamic> medication;
   const MedicationPopup({super.key, required this.medication});
@@ -48,13 +55,8 @@ class MedicationPopup extends StatelessWidget {
 
 class MainMobile extends StatefulWidget {
   final String username;
-  final String email; // ✅ เพิ่มฟิลด์อีเมล
 
-  const MainMobile({
-    super.key,
-    required this.username,
-    required this.email, // ✅ ต้องรับค่า email มาด้วย
-  });
+  const MainMobile({super.key, required this.username});
 
   @override
   State<MainMobile> createState() => _MainMobileState();
@@ -137,15 +139,13 @@ class _MainMobileState extends State<MainMobile> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-
-            // ✅ แสดงชื่อและอีเมลของผู้ใช้
             Text(
               'สวัสดีคุณ ${widget.username}',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            Text(
-              'อีเมลของคุณ: ${widget.email}',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            const Text(
+              'ขอให้วันนี้เป็นวันที่ดีนะ 🌿',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 20),
 
@@ -179,8 +179,10 @@ class _MainMobileState extends State<MainMobile> {
                             return const CircularProgressIndicator();
                           }
                           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Text('ยังไม่มีรายการยา',
-                                style: TextStyle(fontSize: 16));
+                            return const Text(
+                              'ยังไม่มีรายการยา',
+                              style: TextStyle(fontSize: 16),
+                            );
                           }
 
                           final meds = snapshot.data!;
@@ -191,20 +193,16 @@ class _MainMobileState extends State<MainMobile> {
                             itemBuilder: (context, index) {
                               final med = meds[index];
                               final name = med['name']?.toString() ?? '-';
-                              final notifyTime =
-                                  med['notifyTime']?.toString() ?? '-';
+                              final notifyTime = med['notifyTime']?.toString() ?? '-';
                               final dose = med['dose']?.toString() ?? '-';
-                              final importance =
-                                  med['importance']?.toString() ?? '-';
-                              final importanceColor =
-                                  _importanceColor(importance);
+                              final importance = med['importance']?.toString() ?? '-';
+                              final importanceColor = _importanceColor(importance);
 
                               return InkWell(
                                 onTap: () {
                                   showDialog(
                                     context: context,
-                                    builder: (_) =>
-                                        MedicationPopup(medication: med),
+                                    builder: (_) => MedicationPopup(medication: med),
                                   );
                                 },
                                 child: Card(
@@ -212,8 +210,7 @@ class _MainMobileState extends State<MainMobile> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  margin:
-                                      const EdgeInsets.symmetric(vertical: 6),
+                                  margin: const EdgeInsets.symmetric(vertical: 6),
                                   child: Padding(
                                     padding: const EdgeInsets.all(12.0),
                                     child: Row(
@@ -222,8 +219,10 @@ class _MainMobileState extends State<MainMobile> {
                                           radius: 25,
                                           backgroundColor:
                                               importanceColor.withOpacity(0.2),
-                                          child: Icon(Icons.medical_services,
-                                              color: importanceColor),
+                                          child: Icon(
+                                            Icons.medical_services,
+                                            color: importanceColor,
+                                          ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -310,12 +309,9 @@ class _MainMobileState extends State<MainMobile> {
     );
   }
 
-  // ✅ ส่ง email ต่อไปด้วย
-  Widget _addMedicationPage() =>
-      MedicationListWidget(username: widget.username);
-  Widget _appointmentsPage() =>
-      AppointmentsPage(username: widget.username);
-  Widget _ReportPage() => ReportPage(username: widget.username);
+  Widget _addMedicationPage() => MedicationListWidget(username: widget.username);
+  Widget _appointmentsPage() => AppointmentsPage(username: widget.username);
+  Widget _reportPage() => ReportPage(username: widget.username);
 
   @override
   Widget build(BuildContext context) {
@@ -323,13 +319,39 @@ class _MainMobileState extends State<MainMobile> {
       _homePage(),
       _addMedicationPage(),
       _appointmentsPage(),
-      _ReportPage(),
+      _reportPage(),
     ];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Main Mobile'),
         backgroundColor: Colors.green,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'ตั้งค่า',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsPage(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_active),
+            tooltip: 'ทดลองแจ้งเตือน',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationTestPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -340,10 +362,8 @@ class _MainMobileState extends State<MainMobile> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.medical_services), label: 'ยาของฉัน'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today), label: 'นัดหมายของฉัน'),
+          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: 'ยาของฉัน'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'นัดหมายของฉัน'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'รายงาน'),
         ],
       ),

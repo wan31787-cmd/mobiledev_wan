@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobiledev_wan/services/notification_service.dart';
-import 'firestore_api.dart';
+import '../services/firestore_api.dart';
 
 class AddMedicationPage extends StatefulWidget {
   final String username;
